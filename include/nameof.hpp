@@ -51,13 +51,13 @@
 
 // Checks nameof_type compiler compatibility.
 #if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
-#  undef NAMEOF_TYPE_SUPPORTED
+#  undef  NAMEOF_TYPE_SUPPORTED
 #  define NAMEOF_TYPE_SUPPORTED 1
 #endif
 
 // Checks nameof_enum compiler compatibility.
 #if defined(__clang__) || defined(__GNUC__) && __GNUC__ >= 9 || defined(_MSC_VER)
-#  undef NAMEOF_ENUM_SUPPORTED
+#  undef  NAMEOF_ENUM_SUPPORTED
 #  define NAMEOF_ENUM_SUPPORTED 1
 #endif
 
@@ -77,14 +77,18 @@ namespace nameof {
 
 // Enum value must be in range [NAMEOF_ENUM_RANGE_MIN, NAMEOF_ENUM_RANGE_MAX]. By default NAMEOF_ENUM_RANGE_MIN = -128, NAMEOF_ENUM_RANGE_MAX = 128.
 // If need another range for all enum types by default, redefine the macro NAMEOF_ENUM_RANGE_MIN and NAMEOF_ENUM_RANGE_MAX.
-// If need another range for specific enum type, add specialization enum_range for necessary enum type.
+// If need another range for specific enum type, add overloading enum_range for necessary enum type, or use marco `NAMEOF_ENUM_RANGE`.
 template <typename E>
-struct enum_range {
+constexpr auto nameof_enum_range(E) noexcept {
   static_assert(std::is_enum_v<E>, "nameof::enum_range requires enum type.");
-  inline static constexpr int min = NAMEOF_ENUM_RANGE_MIN;
-  inline static constexpr int max = NAMEOF_ENUM_RANGE_MAX;
-  static_assert(max > min, "nameof::enum_range requires max > min.");
-};
+  return std::array<int, 2>{{NAMEOF_ENUM_RANGE_MIN, NAMEOF_ENUM_RANGE_MAX}};
+}
+
+#undef  NAMEOF_ENUM_RANGE
+#define NAMEOF_ENUM_RANGE(name, min, max)         \
+constexpr auto nameof_enum_range(name) noexcept { \
+  return std::array<int, 2>{{min, max}};          \
+}
 
 static_assert(NAMEOF_ENUM_RANGE_MIN <= 0, "NAMEOF_ENUM_RANGE_MIN must be less or equals than 0.");
 static_assert(NAMEOF_ENUM_RANGE_MIN > (std::numeric_limits<std::int16_t>::min)(), "NAMEOF_ENUM_RANGE_MIN must be greater than INT16_MIN.");
@@ -254,11 +258,6 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
 
 namespace detail {
 
-template <typename T>
-struct identity {
-  using type = T;
-};
-
 template <typename... T>
 struct nameof_type_supported
 #if defined(NAMEOF_TYPE_SUPPORTED) && NAMEOF_TYPE_SUPPORTED || defined(NAMEOF_TYPE_NO_CHECK_SUPPORT)
@@ -274,6 +273,11 @@ struct nameof_enum_supported
 #else
     : std::false_type {};
 #endif
+
+template <typename T>
+struct identity {
+  using type = T;
+};
 
 template <typename T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -407,7 +411,8 @@ constexpr bool mixed_sign_less(L lhs, R rhs) noexcept {
 template <typename E>
 constexpr int reflected_min() noexcept {
   static_assert(is_enum_v<E>, "nameof::detail::reflected_min requires enum type.");
-  constexpr auto lhs = enum_range<E>::min;
+  static_assert(nameof_enum_range(E{}).size() > 0, "nameof::enum_range requires min");
+  constexpr auto lhs = nameof_enum_range(E{})[0];
   static_assert(lhs > (std::numeric_limits<std::int16_t>::min)(), "nameof::enum_range requires min must be greater than INT16_MIN.");
   constexpr auto rhs = (std::numeric_limits<std::underlying_type_t<E>>::min)();
 
@@ -417,7 +422,8 @@ constexpr int reflected_min() noexcept {
 template <typename E>
 constexpr int reflected_max() noexcept {
   static_assert(is_enum_v<E>, "nameof::detail::reflected_max requires enum type.");
-  constexpr auto lhs = enum_range<E>::max;
+  static_assert(nameof_enum_range(E{}).size() > 1, "nameof::enum_range requires max");
+  constexpr auto lhs = nameof_enum_range(E{})[1];
   static_assert(lhs < (std::numeric_limits<std::int16_t>::max)(), "nameof::enum_range requires max must be less than INT16_MAX.");
   constexpr auto rhs = (std::numeric_limits<std::underlying_type_t<E>>::max)();
 

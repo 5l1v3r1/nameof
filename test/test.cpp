@@ -79,15 +79,11 @@ enum Directions { Up = 85, Down = -42, Right = 120, Left = -120 };
 
 enum number : unsigned long { one = 100, two = 200, three = 300, four = 400 };
 
-namespace nameof {
-template <>
-struct enum_range<number> {
-  static_assert(std::is_enum_v<number>, "nameof::enum_range<number> requires enum type.");
-  static constexpr int min = 100;
-  static constexpr int max = 300;
-  static_assert(max > min, "nameof::enum_range<number> requires max > min.");
-};
+constexpr auto nameof_enum_range(number) noexcept {
+  return std::array<int, 2>{{/*min:*/ 100, /*max:*/ 300}};
 }
+
+NAMEOF_ENUM_RANGE(Directions, /*min:*/ -120, /*max:*/ 120)
 
 SomeStruct struct_var;
 Long othervar;

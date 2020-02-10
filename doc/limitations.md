@@ -38,20 +38,24 @@
     #include <nameof.hpp>
     ```
 
-  * If need another range for specific enum type, add specialization `enum_range` for necessary enum type.
+  * If need another range for specific enum type, add overloading `nameof_enum_range` for necessary enum type, or use marco `NAMEOF_ENUM_RANGE`.
 
     ```cpp
     #include <nameof.hpp>
 
     enum number { one = 100, two = 200, three = 300 };
 
-    namespace nameof {
-    template <>
-    struct enum_range<number> {
-      static constexpr int min = 100;
-      static constexpr int max = 300;
-    };
+    constexpr auto nameof_enum_range(number) noexcept {
+      return std::array{/*min:*/ 100, /*max:*/ 300};
     }
+    ```
+
+    ```cpp
+    #include <nameof.hpp>
+
+    enum number { one = 100, two = 200, three = 300 };
+
+    NAMEOF_ENUM_RANGE(number, /*min:*/ 100, /*max:*/ 300)
     ```
 
 * If you hit a message like this:
